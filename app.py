@@ -5,10 +5,10 @@ import os
 app = Flask(__name__, static_folder="static", template_folder="templates")
 chat_history = []
 
-# ✅ Print environment variable to debug
+# Debug print for Render logs (you can remove after confirming)
 print("OPENROUTER_API_KEY =", os.environ.get("OPENROUTER_API_KEY"))
 
-# ✅ Then create OpenAI client
+# Initialize OpenAI client using OpenRouter
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ.get("OPENROUTER_API_KEY")
@@ -18,11 +18,9 @@ client = OpenAI(
 def index():
     return render_template("index.html")
 
-
-@app.route('/health', methods=['GET'])
+@app.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "Athena-2.7 Up and Running!"}), 200
-
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
@@ -41,13 +39,36 @@ You must:
 
     data = request.get_json()
     user_message = data.get("message")
+    
+    if not user_message:
+        return jsonify({"reply": "No message received."}), 400
 
     # Add user message to history
     chat_history.append({"role": "user", "content": user_message})
 
-    # Prepare full conversation with system prompt at the top
+    # Prepare full conversation
     full_convo = [{"role": "system", "content": system_prompt}] + chat_history
 
     try:
         completion = client.chat.completions.create(
-            model="deepseek/
+            model="deepseek/deepseek-r1-0528-qwen3-8b:free",
+            extra_headers={
+                "HTTP-Referer": "https://sk-ant-api03.onrender.com",
+                "X-Title": "ClaudeMultilingualContextBot"
+            },
+            messages=full_convo
+        )
+
+        reply = completion.choices[0].message.content
+
+        # Save assistant's reply
+        chat_history.append({"role": "assistant", "content": reply})
+
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"reply": "Error talking to the model."}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
