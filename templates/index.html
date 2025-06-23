@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Athena-2.7(creampie)</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      Athena
+      <div class="dropdown-wrapper">
+        <div class="hamburger" id="hamburger">&#9776;</div>
+        <ul class="dropdown" id="dropdown">
+          <li data-lang="English">English</li>
+          <li data-lang="Spanish">Español</li>
+          <li data-lang="Italian">Italian</li>
+          <li data-lang="French">Français</li>
+          <li data-lang="Hindi">हिन्दी</li>
+          <li data-lang="Japanese">日本語</li>
+        </ul>
+      </div>
+       <button id="dark-toggle" title="Toggle Dark Mode">🌙</button>
+    </div>
+
+    <div class="chat-box" id="chat-box"></div>
+
+    <form id="chat-form">
+      <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" required />
+      <button type="submit">➤</button>
+    </form>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
