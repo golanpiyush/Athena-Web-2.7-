@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
+import os
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 chat_history = []
