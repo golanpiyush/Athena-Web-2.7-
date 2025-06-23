@@ -7,7 +7,7 @@ chat_history = []
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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"
+    api_key=os.environ.get("OPENROUTER_API_KEY")
 )
 
 @app.route("/")
