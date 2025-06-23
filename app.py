@@ -14,6 +14,12 @@ client = OpenAI(
 def index():
     return render_template("index.html")
 
+
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "Athena-2.7 Up and Running!"}), 200
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     system_prompt = """
