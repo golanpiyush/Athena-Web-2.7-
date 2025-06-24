@@ -5,47 +5,87 @@ const userInput = document.getElementById('user-input');
 const hamburger = document.getElementById('hamburger');
 const dropdown = document.getElementById('dropdown');
 const darkToggle = document.getElementById('dark-toggle');
-const submitButton = chatForm.querySelector('button[type="submit"]');
+const clearChatBtn = document.getElementById('clear-chat');
+const statusBar = document.getElementById('status-bar');
+const statusText = document.getElementById('status-text');
+const modelInfo = document.getElementById('model-info');
+const typingIndicator = document.getElementById('typing-indicator');
+const loadingOverlay = document.getElementById('loading-overlay');
+const sendButton = document.getElementById('send-button');
+const modelSelect = document.getElementById('model-select'); // Added missing element
 
 // State Management
 let selectedLang = "English";
 let isTyping = false;
 let currentStreamingElement = null;
+let messageCount = 0;
+let lastModelUsed = '';
 
-// System Prompts for Different Languages
+// System Prompts
 const systemPrompts = {
-  English: "You are Athena, a wise and helpful AI assistant. Respond thoughtfully and provide clear, helpful information.",
-  Spanish: "Eres Athena, una asistente de IA sabia y útil. Responde de manera reflexiva y proporciona información clara y útil en español.",
-  Italian: "Sei Athena, un'assistente IA saggia e utile. Rispondi in modo riflessivo e fornisci informazioni chiare e utili in italiano.",
-  French: "Vous êtes Athena, une assistante IA sage et utile. Répondez de manière réfléchie et fournissez des informations claires et utiles en français.",
-  Hindi: "आप अथेना हैं, एक बुद्धिमान और सहायक AI असिस्टेंट। विचारशील तरीके से जवाब दें और स्पष्ट, उपयोगी जानकारी प्रदान करें।",
-  Japanese: "あなたはアテナ、賢くて親切なAIアシスタントです。思慮深く答え、明確で役立つ情報を提供してください。"
+  English: "You are Athena, an arrogant genius AI with razor-sharp wit. You remember everything and never repeat yourself. Be concise, brilliant, and sometimes sarcastic.",
+  Spanish: "Eres Athena, una IA genial y arrogante con ingenio afilado. Recuerdas todo y nunca te repites. Sé concisa, brillante y a veces sarcástica en español.",
+  Italian: "Sei Athena, un'IA geniale e arrogante con arguzia tagliente. Ricordi tutto e non ti ripeti mai. Sii concisa, brillante e talvolta sarcastica in italiano.",
+  French: "Vous êtes Athena, une IA géniale et arrogante avec un esprit acéré. Vous vous souvenez de tout et ne vous répétez jamais. Soyez concise, brillante et parfois sarcastique en français.",
+  Hindi: "आप अथेना हैं, एक अहंकारी प्रतिभाशाली AI जो सब कुछ याद रखती है। कभी खुद को दोहराएं नहीं। संक्षिप्त, प्रतिभाशाली और कभी-कभी व्यंग्यात्मक बनें।",
+  Japanese: "あなたはアテナ、傲慢な天才AIです。すべてを覚えており、決して繰り返しません。簡潔で、優秀で、時には皮肉っぽく答えてください。",
+  German: "Sie sind Athena, eine arrogante Genie-KI mit scharfem Verstand. Sie erinnern sich an alles und wiederholen sich nie. Seien Sie prägnant, brillant und manchmal sarkastisch auf Deutsch.",
+  Chinese: "你是雅典娜，一个傲慢的天才AI，记住一切且从不重复。要简洁、聪明，有时讽刺。用中文回答。"
 };
 
-// Language Display Names
 const languageNames = {
-  English: "English",
-  Spanish: "Español", 
-  Italian: "Italiano",
-  French: "Français",
-  Hindi: "हिन्दी",
-  Japanese: "日本語"
+  English: "🇺🇸 English",
+  Spanish: "🇪🇸 Español", 
+  Italian: "🇮🇹 Italiano",
+  French: "🇫🇷 Français",
+  Hindi: "🇮🇳 हिन्दी",
+  Japanese: "🇯🇵 日本語",
+  German: "🇩🇪 Deutsch",
+  Chinese: "🇨🇳 中文"
 };
 
 // Initialize Application
 function initializeApp() {
+  console.log('🧠 Initializing Athena 2.7 Multi-Guard System...');
   loadDarkMode();
   setupEventListeners();
-  createAnimatedBackground();
-  displayWelcomeMessage();
+  updateStatusBar('Ready', 'success');
   focusInput();
+  checkBackendHealth();
+}
+
+// Backend Health Check
+async function checkBackendHealth() {
+  try {
+    const response = await fetch('/health');
+    const data = await response.json();
+    updateStatusBar(data.status, 'success');
+    if (data.models) {
+      updateModelInfo(`${data.models} models active`);
+    }
+  } catch (error) {
+    console.error('Health check failed:', error);
+    updateStatusBar('Backend offline', 'error');
+  }
+}
+
+// Status Bar Management
+function updateStatusBar(message, type = 'info') {
+  if (statusText) {
+    statusText.textContent = message;
+    statusText.className = `status-${type}`;
+  }
+}
+
+function updateModelInfo(info) {
+  if (modelInfo) {
+    modelInfo.textContent = info;
+  }
 }
 
 // Dark Mode Management
 function loadDarkMode() {
-  // Note: In a real Flask app, you might want to use server-side storage instead
-  // For now, we'll use a simple session-based approach
-  const isDarkMode = sessionStorage.getItem("darkMode") === "true";
+  const isDarkMode = sessionStorage.getItem("athena-dark-mode") === "true";
   if (isDarkMode) {
     document.body.classList.add("dark-mode");
     updateDarkToggleIcon(true);
@@ -54,100 +94,111 @@ function loadDarkMode() {
 
 function toggleDarkMode() {
   const isDark = document.body.classList.toggle("dark-mode");
-  sessionStorage.setItem("darkMode", isDark);
+  sessionStorage.setItem("athena-dark-mode", isDark);
   updateDarkToggleIcon(isDark);
-  
-  // Add a nice transition effect
   document.body.style.transition = "all 0.3s ease";
   setTimeout(() => {
     document.body.style.transition = "";
   }, 300);
+  showNotification(`${isDark ? 'Dark' : 'Light'} mode activated`, 'info');
 }
 
 function updateDarkToggleIcon(isDark) {
-  darkToggle.innerHTML = isDark ? '☀️' : '🌙';
-  darkToggle.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  if (darkToggle) {
+    darkToggle.innerHTML = isDark ? '☀️' : '🌙';
+    darkToggle.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  }
 }
 
 // Event Listeners Setup
 function setupEventListeners() {
-  // Dark mode toggle
-  darkToggle.addEventListener('click', toggleDarkMode);
-
-  // Language dropdown
-  hamburger.addEventListener('click', toggleDropdown);
+  if (darkToggle) darkToggle.addEventListener('click', toggleDarkMode);
+  if (clearChatBtn) clearChatBtn.addEventListener('click', clearChatHistory);
+  if (hamburger) hamburger.addEventListener('click', toggleDropdown);
   
-  // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
-    if (!dropdown.contains(e.target) && !hamburger.contains(e.target)) {
+    if (dropdown && !dropdown.contains(e.target) && hamburger && !hamburger.contains(e.target)) {
       dropdown.classList.remove('show');
     }
   });
 
-  // Language selection
-  dropdown.querySelectorAll('li').forEach(li => {
-    li.addEventListener('click', () => selectLanguage(li.getAttribute('data-lang')));
-  });
+  if (dropdown) {
+    dropdown.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => selectLanguage(li.getAttribute('data-lang')));
+    });
+  }
 
-  // Chat form submission
-  chatForm.addEventListener('submit', handleChatSubmission);
+  if (chatForm) {
+    chatForm.addEventListener('submit', handleChatSubmission);
+  }
 
-  // Auto-resize textarea
-  userInput.addEventListener('input', autoResizeInput);
-  
-  // Enter key handling (Shift+Enter for new line, Enter to send)
-  userInput.addEventListener('keydown', handleInputKeydown);
+  if (userInput) {
+    userInput.addEventListener('input', autoResizeInput);
+    userInput.addEventListener('keydown', handleInputKeydown);
+    userInput.addEventListener('focus', () => {
+      if (userInput.parentElement) userInput.parentElement.style.transform = 'scale(1.02)';
+    });
+    userInput.addEventListener('blur', () => {
+      if (userInput.parentElement) userInput.parentElement.style.transform = 'scale(1)';
+    });
+  }
 
-  // Focus management
-  userInput.addEventListener('focus', () => {
-    userInput.parentElement.style.transform = 'scale(1.02)';
-  });
-  
-  userInput.addEventListener('blur', () => {
-    userInput.parentElement.style.transform = 'scale(1)';
-  });
+  document.addEventListener('keydown', handleGlobalKeyboard);
+}
+
+// Global Keyboard Shortcuts
+function handleGlobalKeyboard(e) {
+  if (e.ctrlKey && e.key === 'l') {
+    e.preventDefault();
+    clearChatHistory();
+  }
+  if (e.key === 'Escape' && isTyping) {
+    e.preventDefault();
+    stopTyping();
+  }
 }
 
 // Dropdown Management
 function toggleDropdown() {
-  dropdown.classList.toggle('show');
-  
-  // Update dropdown content with current selection
-  dropdown.querySelectorAll('li').forEach(li => {
-    const lang = li.getAttribute('data-lang');
-    li.classList.toggle('active', lang === selectedLang);
-  });
+  if (dropdown) {
+    dropdown.classList.toggle('show');
+    dropdown.querySelectorAll('li').forEach(li => {
+      const lang = li.getAttribute('data-lang');
+      li.classList.toggle('active', lang === selectedLang);
+    });
+  }
 }
 
 function selectLanguage(lang) {
   selectedLang = lang;
-  dropdown.classList.remove('show');
-  
-  // Show language change notification
-  showNotification(`Language changed to ${languageNames[lang]}`, 'info');
-  
-  // Update UI to reflect language change
+  if (dropdown) dropdown.classList.remove('show');
+  showNotification(`Language: ${languageNames[lang]}`, 'info');
   updateLanguageUI();
 }
 
 function updateLanguageUI() {
-  // You could update placeholder text based on language here
   const placeholders = {
-    English: "Type your message...",
-    Spanish: "Escribe tu mensaje...",
-    Italian: "Scrivi il tuo messaggio...",
-    French: "Tapez votre message...",
-    Hindi: "अपना संदेश टाइप करें...",
-    Japanese: "メッセージを入力してください..."
+    English: "Ask me anything... I dare you to challenge my intellect",
+    Spanish: "Pregúntame cualquier cosa... Te reto a desafiar mi intelecto",
+    Italian: "Chiedimi qualsiasi cosa... Ti sfido a sfidare il mio intelletto",
+    French: "Demandez-moi n'importe quoi... Je vous défie de défier mon intellect",
+    Hindi: "मुझसे कुछ भी पूछें... मैं आपको अपनी बुद्धि को चुनौती देने की हिम्मत करता हूं",
+    Japanese: "何でも聞いてください...私の知性に挑戦してみてください",
+    German: "Fragen Sie mich alles... Ich fordere Sie heraus, meinen Intellekt herauszufordern",
+    Chinese: "问我任何问题...我敢你挑战我的智慧"
   };
   
-  userInput.placeholder = placeholders[selectedLang];
+  if (userInput) {
+    userInput.placeholder = placeholders[selectedLang] || placeholders.English;
+  }
 }
 
 // Input Management
 function autoResizeInput() {
-  userInput.style.height = 'auto';
-  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  if (userInput) {
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  }
 }
 
 function handleInputKeydown(e) {
@@ -160,7 +211,9 @@ function handleInputKeydown(e) {
 }
 
 function focusInput() {
-  setTimeout(() => userInput.focus(), 100);
+  if (userInput) {
+    setTimeout(() => userInput.focus(), 100);
+  }
 }
 
 // Chat Functionality
@@ -170,20 +223,19 @@ async function handleChatSubmission(e) {
   const userMessage = userInput.value.trim();
   if (!userMessage || isTyping) return;
 
-  // Update UI state
   isTyping = true;
-  updateSubmitButton(true);
+  updateSendButton(true);
+  showLoadingOverlay(true);
+  updateStatusBar('Processing...', 'info');
   
-  // Add user message
   appendMessage('user', userMessage);
   userInput.value = '';
   autoResizeInput();
+  messageCount++;
 
-  // Show typing indicator
-  const typingIndicator = showTypingIndicator();
+  showTypingIndicator(true);
 
   try {
-    // Make API request
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 
@@ -192,39 +244,83 @@ async function handleChatSubmission(e) {
       },
       body: JSON.stringify({
         message: userMessage,
-        system: systemPrompts[selectedLang],
-        language: selectedLang
+        language: selectedLang,
+        model: modelSelect ? modelSelect.value : undefined
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
+    showTypingIndicator(false);
+    showLoadingOverlay(false);
     
-    // Remove typing indicator
-    removeTypingIndicator(typingIndicator);
+    if (data.model_used) {
+      lastModelUsed = data.model_used;
+      updateModelInfo(`${data.model_used} (${data.response_time})`);
+      updateStatusBar('Response ready', 'success');
+    }
     
-    // Stream the response
-    await streamBotResponse(data.reply || data.response || 'No response received');
+    await streamBotResponse(data.reply || 'No response received');
 
   } catch (error) {
-    console.error('Chat error:', error);
-    removeTypingIndicator(typingIndicator);
-    appendMessage('bot', 'Sorry, I encountered an error. Please try again.', true);
-    showNotification('Connection error. Please check your network.', 'error');
+    console.error('Chat API error:', error);
+    showTypingIndicator(false);
+    showLoadingOverlay(false);
+    updateStatusBar('Error occurred', 'error');
+    appendMessage('bot', `Error: ${error.message}. Please try again.`, true);
+    showNotification('Failed to get response from Athena', 'error');
   } finally {
-    // Reset UI state
     isTyping = false;
-    updateSubmitButton(false);
+    updateSendButton(false);
+    updateStatusBar('Online 🟢', 'success');
     focusInput();
   }
 }
 
-function updateSubmitButton(disabled) {
-  submitButton.disabled = disabled;
-  submitButton.innerHTML = disabled ? '<div class="loading-spinner"></div>' : '➤';
+// if (modelSelect) {
+//     modelSelect.addEventListener('change', function() {
+//         const selector = document.querySelector('.model-selector');
+//         selector.classList.add('changed');
+//         setTimeout(() => selector.classList.remove('changed'), 300);
+        
+//         // Optional: Show notification of model change
+//         showNotification(`Model changed to: ${this.value}`, 'info');
+//     });
+// }
+
+function updateSendButton(disabled) {
+  if (sendButton) {
+    sendButton.disabled = disabled;
+    const icon = sendButton.querySelector('.send-icon');
+    if (icon) {
+      icon.innerHTML = disabled ? '⏳' : '➤';
+    }
+  }
+}
+
+function showLoadingOverlay(show) {
+  if (loadingOverlay) {
+    loadingOverlay.style.display = show ? 'flex' : 'none';
+  }
+}
+
+function showTypingIndicator(show) {
+  if (typingIndicator) {
+    typingIndicator.style.display = show ? 'flex' : 'none';
+    if (show) scrollToBottom();
+  }
+}
+
+function stopTyping() {
+  isTyping = false;
+  showTypingIndicator(false);
+  showLoadingOverlay(false);
+  updateSendButton(false);
+  updateStatusBar('Cancelled', 'info');
 }
 
 // Message Management
@@ -232,86 +328,92 @@ function appendMessage(sender, text, isError = false) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', sender);
   
-  if (isError) {
-    messageElement.classList.add('error');
-  }
+  if (isError) messageElement.classList.add('error');
   
-  // Add timestamp for accessibility
   const timestamp = new Date().toLocaleTimeString();
   messageElement.setAttribute('data-timestamp', timestamp);
   messageElement.setAttribute('role', sender === 'user' ? 'user' : 'assistant');
   
-  if (sender === 'bot') {
-    messageElement.innerHTML = `<span class="message-content">${escapeHtml(text)}</span>`;
-  } else {
-    messageElement.textContent = text;
-  }
+  messageElement.innerHTML = sender === 'bot' ? 
+    `<div class="ai-avatar">🧠</div><div class="message-content">${escapeHtml(text)}</div>` :
+    `<div class="user-avatar">👤</div><div class="message-content">${escapeHtml(text)}</div>`;
+  
+  const welcomeMsg = chatBox.querySelector('.welcome-message');
+  if (welcomeMsg && sender === 'user') welcomeMsg.remove();
   
   chatBox.appendChild(messageElement);
   scrollToBottom();
   
+  messageElement.style.opacity = '0';
+  messageElement.style.transform = 'translateY(20px)';
+  setTimeout(() => {
+    messageElement.style.opacity = '1';
+    messageElement.style.transform = 'translateY(0)';
+    messageElement.style.transition = 'all 0.3s ease';
+  }, 10);
+  
   return messageElement;
-}
-
-function showTypingIndicator() {
-  const indicator = document.createElement('div');
-  indicator.classList.add('typing-indicator');
-  indicator.innerHTML = `
-    <div class="typing-dot"></div>
-    <div class="typing-dot"></div>
-    <div class="typing-dot"></div>
-  `;
-  indicator.setAttribute('role', 'status');
-  indicator.setAttribute('aria-label', 'Athena is typing');
-  
-  chatBox.appendChild(indicator);
-  scrollToBottom();
-  
-  return indicator;
-}
-
-function removeTypingIndicator(indicator) {
-  if (indicator && indicator.parentNode) {
-    indicator.style.opacity = '0';
-    setTimeout(() => {
-      if (indicator.parentNode) {
-        indicator.parentNode.removeChild(indicator);
-      }
-    }, 200);
-  }
 }
 
 async function streamBotResponse(text) {
   const messageElement = appendMessage('bot', '');
-  const contentSpan = messageElement.querySelector('.message-content');
-  currentStreamingElement = contentSpan;
+  const contentDiv = messageElement.querySelector('.message-content');
+  currentStreamingElement = contentDiv;
   
-  // Add streaming cursor
-  contentSpan.classList.add('streaming');
-  
+  contentDiv.classList.add('streaming');
   const words = text.split(' ');
   let currentText = '';
   
   for (let i = 0; i < words.length; i++) {
-    if (currentStreamingElement !== contentSpan) break; // Stop if interrupted
-    
+    if (currentStreamingElement !== contentDiv) break;
     currentText += (i > 0 ? ' ' : '') + words[i];
-    contentSpan.textContent = currentText;
+    contentDiv.textContent = currentText;
     scrollToBottom();
-    
-    // Variable delay for more natural typing
-    const delay = Math.random() * 50 + 30;
-    await new Promise(resolve => setTimeout(resolve, delay));
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 40 + 20));
   }
   
-  // Remove streaming cursor
-  contentSpan.classList.remove('streaming');
+  contentDiv.classList.remove('streaming');
   currentStreamingElement = null;
+  messageCount++;
+  updateStatusBar(`${messageCount} messages exchanged`, 'success');
+}
+
+// Clear Chat Functionality
+async function clearChatHistory() {
+  if (!confirm('Are you sure you want to clear the chat history? This will reset our conversation.')) return;
+  
+  try {
+    const response = await fetch('/api/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      chatBox.innerHTML = `
+        <div class="welcome-message">
+          <div class="ai-avatar">🧠</div>
+          <div class="message-content">
+            <strong>Welcome back to Athena 2.7</strong><br>
+            Chat history cleared. I'm ready for new intellectual challenges.
+          </div>
+        </div>
+      `;
+      messageCount = 0;
+      updateStatusBar('Chat cleared', 'success');
+      updateModelInfo('');
+      showNotification('Chat history cleared successfully', 'success');
+    } else {
+      throw new Error('Failed to clear chat');
+    }
+  } catch (error) {
+    console.error('Clear chat error:', error);
+    showNotification('Failed to clear chat history', 'error');
+  }
 }
 
 // Utility Functions
 function scrollToBottom() {
-  chatBox.scrollTop = chatBox.scrollHeight;
+  if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function escapeHtml(text) {
@@ -325,6 +427,13 @@ function showNotification(message, type = 'info') {
   notification.className = `notification ${type}`;
   notification.textContent = message;
   
+  const colors = {
+    success: '#10b981',
+    error: '#ef4444',
+    info: '#3b82f6',
+    warning: '#f59e0b'
+  };
+  
   notification.style.cssText = `
     position: fixed;
     top: 20px;
@@ -336,79 +445,31 @@ function showNotification(message, type = 'info') {
     z-index: 1000;
     transform: translateX(100%);
     transition: transform 0.3s ease;
-    ${type === 'error' ? 'background: #ef4444;' : 'background: #10b981;'}
+    background: ${colors[type] || colors.info};
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   `;
   
   document.body.appendChild(notification);
   
-  // Animate in
-  setTimeout(() => {
-    notification.style.transform = 'translateX(0)';
-  }, 100);
-  
-  // Remove after delay
+  setTimeout(() => notification.style.transform = 'translateX(0)', 100);
   setTimeout(() => {
     notification.style.transform = 'translateX(100%)';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
+    setTimeout(() => notification.parentNode?.removeChild(notification), 300);
   }, 3000);
 }
 
-// Animated Background
-function createAnimatedBackground() {
-  const bgAnimation = document.createElement('div');
-  bgAnimation.className = 'bg-animation';
-  
-  const floatingShapes = document.createElement('div');
-  floatingShapes.className = 'floating-shapes';
-  
-  // Create floating shapes
-  for (let i = 0; i < 5; i++) {
-    const shape = document.createElement('div');
-    shape.className = 'shape';
-    floatingShapes.appendChild(shape);
-  }
-  
-  bgAnimation.appendChild(floatingShapes);
-  document.body.appendChild(bgAnimation);
-}
-
-// Welcome Message
-function displayWelcomeMessage() {
-  setTimeout(() => {
-    appendMessage('bot', 'Hello! I\'m Athena, your AI assistant. How can I help you today? 🦉');
-  }, 500);
-}
-
-// Enhanced Error Handling
+// Error Handling
 window.addEventListener('error', (e) => {
   console.error('Global error:', e.error);
   showNotification('An unexpected error occurred', 'error');
+  updateStatusBar('Error detected', 'error');
 });
 
 window.addEventListener('unhandledrejection', (e) => {
   console.error('Unhandled promise rejection:', e.reason);
   showNotification('A network error occurred', 'error');
+  updateStatusBar('Network error', 'error');
 });
-
-// Performance Optimization
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-
-// Optimized scroll handling
-const debouncedScrollToBottom = debounce(scrollToBottom, 10);
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
@@ -417,19 +478,25 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
-// Add CSS classes for enhanced functionality
-const additionalStyles = `
+// Inject additional CSS
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
   .message-content.streaming::after {
     content: '|';
     animation: typingBlink 1s infinite;
     color: #667eea;
   }
   
+  @keyframes typingBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+  
   .notification {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
   
-  .message.error {
+  .message.error .message-content {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
     color: white !important;
   }
@@ -439,12 +506,47 @@ const additionalStyles = `
     font-weight: 600;
   }
   
-  .typing-indicator {
-    animation: messageSlide 0.4s ease;
+  .message {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+  }
+  
+  .status-success { color: #10b981; }
+  .status-error { color: #ef4444; }
+  .status-info { color: #3b82f6; }
+  .status-warning { color: #f59e0b; }
+  
+  .ai-avatar, .user-avatar {
+    font-size: 1.2em;
+    margin-right: 8px;
+  }
+
+  /* Dark mode text color fix */
+  .dark-mode {
+    color: #ffffff;
+  }
+  
+  .dark-mode .message-content {
+    color: #ffffff;
+  }
+  
+  .dark-mode .user-input {
+    color: #ffffff;
+    background-color: #2d3748;
+  }
+  
+  /* Remove circular progress bar */
+  .progress-circle {
+    display: none !important;
+  }
+  
+  /* Remove blur effects */
+  .blur-effect {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;if
   }
 `;
-
-// Inject additional styles
-const styleSheet = document.createElement('style');
-styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
+
+console.log('🧠 Athena 2.7 Multi-Guard JavaScript loaded successfully!');

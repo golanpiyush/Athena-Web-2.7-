@@ -1,36 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Athena-2.7(creampie)</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athena 2.7 - Smart AI Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-header">
-      Athena
-      <div class="dropdown-wrapper">
-        <div class="hamburger" id="hamburger">&#9776;</div>
-        <ul class="dropdown" id="dropdown">
-          <li data-lang="English">English</li>
-          <li data-lang="Spanish">Español</li>
-          <li data-lang="Italian">Italian</li>
-          <li data-lang="French">Français</li>
-          <li data-lang="Hindi">हिन्दी</li>
-          <li data-lang="Japanese">日本語</li>
-        </ul>
-      </div>
-       <button id="dark-toggle" title="Toggle Dark Mode">🌙</button>
+    <div class="chat-container">
+        <!-- Header with title and controls -->
+        <div class="chat-header">
+            <div class="header-left">
+                <h1>Athena 2.7</h1>
+                <span class="subtitle">Multi-Guard AI</span>
+            </div>
+            
+            <div class="header-controls">
+                <!-- Language Selector -->
+                <div class="dropdown-wrapper">
+                    <button class="hamburger" id="hamburger" aria-label="Language Menu">
+                        🌐
+                    </button>
+                    <ul class="dropdown" id="dropdown">
+                        <li data-lang="English">🇺🇸 English</li>
+                        <li data-lang="Spanish">🇪🇸 Español</li>
+                        <li data-lang="Italian">🇮🇹 Italiano</li>
+                        <li data-lang="French">🇫🇷 Français</li>
+                        <li data-lang="Hindi">🇮🇳 हिन्दी</li>
+                        <li data-lang="Japanese">🇯🇵 日本語</li>
+                        <li data-lang="German">🇩🇪 Deutsch</li>
+                        <li data-lang="Chinese">🇨🇳 中文</li>
+                    </ul>
+                </div>
+                
+                <!-- Clear Chat Button -->
+                <button id="clear-chat" title="Clear Chat History" aria-label="Clear Chat">
+                    🗑️
+                </button>
+                
+                <!-- Dark Mode Toggle -->
+                <button id="dark-toggle" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">
+                    🌙
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar" id="status-bar">
+            <span id="status-text">Ready</span>
+            <!-- <span id="model-info"></span> -->
+        </div>
+
+        <!-- Chat Messages Area -->
+        <div class="chat-box" id="chat-box">
+            <div class="welcome-message">
+                <div class="ai-avatar">🧠</div>
+                <div class="message-content">
+                    <strong>Welcome to Athena 2.7</strong><br>
+                    I'm your arrogant but brilliant AI assistant. I remember everything we discuss and never repeat myself. What intellectual challenge do you have for me?
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing indicator -->
+        <div class="typing-indicator" id="typing-indicator" style="display: none;">
+            <div class="ai-avatar">🧠</div>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Input Form -->
+        <form id="chat-form" class="chat-input-form">
+            <div class="model-selector">
+    <label for="model-select">Model:</label>
+    <select id="model-select">
+        <option value="">⚡ Fastest Available</option>
+        <option value="deepseek/deepseek-r1-0528-qwen3-8b:free">Athena 1.2</option>
+        <option value="mistralai/mistral-small-3.2-24b-instruct:free">Athena 1.6</option>
+        <option value="microsoft/phi-4-reasoning-plus:free">Athena 2.2</option>
+        <option value="google/gemini-2.5-flash-preview-05-20">Athena 2.3</option>
+        <option value="qwen/qwen3-32b:free">Athena 2.7 creampie</option>
+    </select>
+</div>
+
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="user-input" 
+                    placeholder="Ask me anything... I dare you to challenge my intellect"
+                    autocomplete="off" 
+                    required 
+                    maxlength="2000"
+                />
+                <button type="submit" id="send-button" aria-label="Send Message">
+                    <span class="send-icon">➤</span>
+                </button>
+            </div>
+            <div class="input-footer">
+                <small>Press Enter to send • Ctrl+L to clear chat</small>
+            </div>
+        </form>
     </div>
 
-    <div class="chat-box" id="chat-box"></div>
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Consulting the fastest AI minds...</p>
+    </div>
 
-    <form id="chat-form">
-      <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" required />
-      <button type="submit">➤</button>
-    </form>
-  </div>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧠 Athena 2.7 Multi-Guard AI initialized');
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+L to clear chat
+                if (e.ctrlKey && e.key === 'l') {
+                    e.preventDefault();
+                    clearChat();
+                }
+                
+                // Escape to cancel typing
+                if (e.key === 'Escape') {
+                    const typingIndicator = document.getElementById('typing-indicator');
+                    if (typingIndicator.style.display !== 'none') {
+                        // Cancel any ongoing request if possible
+                        console.log('User cancelled request');
+                    }
+                }
+            });
+
+            // Auto-focus input on page load
+            document.getElementById('user-input').focus();
+        });
+
+        // Utility function to clear chat (to be implemented in app.js)
+        function clearChat() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                // This will be implemented in app.js
+                console.log('Clearing chat...');
+            }
+        }
+    </script>
 </body>
 </html>
